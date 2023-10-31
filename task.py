@@ -148,6 +148,12 @@ class School:
             grades_sum += school_class.get_class_average_grade()
         return grades_sum / len(self.classes)
 
+    def get_school_total_attendance(self):
+        total_attendance = 0
+        for school_class in self.classes:
+            total_attendance += school_class.get_class_total_attendance()
+        return total_attendance
+
     def add_class(self, code: str, year: int):
         if not self.check_if_class_with_year_and_code_exists(code, year):
             self.classes.append(SchoolClass(year, code))
