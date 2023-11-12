@@ -39,21 +39,6 @@ class Student:
         self.name = name
 
 
-class Lesson:
-    absent_students: list[int]
-    student_grades: list[list[int]]
-
-    def __init__(self, absent_students: list[int], students_count: int):
-        self.absent_students = absent_students
-        self.student_grades = [[] for _ in range(students_count)]
-
-    def add_student_grade(self, student_index: int, grade: int):
-        if len(self.student_grades) > student_index:
-            self.student_grades[student_index].append(grade)
-        else:
-            logging.warning("No such student!")
-
-
 class Subject:
     lessons: List[Lesson]
     name: str
@@ -159,6 +144,63 @@ class School:
             self.classes.append(SchoolClass(year, code))
         else:
             logging.warning("A class with such code and year exists, skipping")
+
+
+# class Lesson:
+#     absent_students: list[int]
+#     student_grades: list[list[int]]
+#
+#     def __init__(self, absent_students: list[int], students_count: int):
+#         self.absent_students = absent_students
+#         self.student_grades = [[] for _ in range(students_count)]
+#
+#     def add_student_grade(self, student_index: int, grade: int):
+#         if len(self.student_grades) > student_index:
+#             self.student_grades[student_index].append(grade)
+#         else:
+#             logging.warning("No such student!")
+
+
+school = {}
+
+
+def add_class(code: str, year: int):
+    if code not in school:
+        school[code] = {"year": year, "students": [], "subjects": {}}
+    else:
+        raise ValueError("Such index already exists!")
+
+
+def add_student(class_code: str, name: str):
+    school[class_code]["students"].append(name)
+
+
+def add_subject(class_id: int, name: str):
+    if name not in school[class_id]["subjects"]:
+        school[class_id]["subjects"][name] = []
+    else:
+        raise ValueError("Such index already exists!")
+
+
+def add_lesson(class_id: int, subject_name: str, absent_students: list[int]):
+    school[class_id]["subjects"][subject_name].append({
+        "absent_students": absent_students,
+        "student_grades": [[] for _ in range(len(school[class_id]["students"]))]
+    })
+
+
+def add_students_grade(class_id: int, subject_name: str, lesson_id: int, student_index: int, grade: int):
+    school[class_id]["subjects"][subject_name][lesson_id]["student_grades"][student_index].append(grade)
+
+
+def get_students_subject_average(subject: list, student_index: int):
+    grades = [grade for lesson in subject for grade in lesson["student_grades"][student_index]]
+    return sum(grades)/len(grades)
+
+
+def get_students_average(class_id: int, student_index: int):
+    grades = [get_students_subject_average(subject, student_index) for subject in school[class_id]["subjects"].values()]
+    return sum(grades)/len(grades)
 
 
 if __name__ == '__main__':
