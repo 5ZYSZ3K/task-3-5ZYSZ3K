@@ -1,0 +1,28 @@
+{
+  "A": {
+    "year": 1,
+    "students": [
+      "Paula"
+    ],
+    "subjects": {
+      "Pszyrka": [
+        {
+          "absent_students": [
+            0
+          ],
+          "student_grades": [
+            []
+          ]
+        },
+        {
+          "absent_students": [],
+          "student_grades": [
+            [
+              5
+            ]
+          ]
+        }
+      ]
+    }
+  }
+}

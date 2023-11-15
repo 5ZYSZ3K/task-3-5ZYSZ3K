@@ -28,140 +28,15 @@
 #
 #Delete these comments before commit!
 #Good luck.
+import inspect
+import json
 import logging
-from typing import List, Callable
+
+logging.basicConfig(level=logging.INFO)
 
 
-class Student:
-    name: str
-
-    def __init__(self, name: str):
-        self.name = name
-
-
-class Subject:
-    lessons: List[Lesson]
-    name: str
-    __students_count_getter: Callable[[], int]
-
-    def __init__(self, name, __students_count_getter: Callable[[], int]):
-        self.lessons = []
-        self.name = name
-        self.__students_count_getter = __students_count_getter
-
-    def add_lesson(self, absent_students: list[int]):
-        self.lessons.append(Lesson(absent_students, self.__students_count_getter()))
-
-    def get_student_total_attendance(self, student_index: int):
-        total_attendance = 0
-        for lesson in self.lessons:
-            total_attendance += 1 if student_index not in lesson.absent_students else 0
-        return total_attendance
-
-    def get_class_total_attendance(self):
-        total_attendance = 0
-        for lesson in self.lessons:
-            total_attendance += self.__students_count_getter() - len(lesson.absent_students)
-        return total_attendance
-
-    def get_students_average_grade(self, student_index: int) -> float:
-        grades_count = 0
-        grades_sum = 0
-        for lesson in self.lessons:
-            grades_count += len(lesson.student_grades[student_index])
-            grades_sum += sum(lesson.student_grades[student_index])
-
-        return grades_sum / grades_count
-
-
-class SchoolClass:
-    code: str
-    year: int
-    subjects: List[Subject]
-    students: List[Student]
-
-    def __init__(self, code, year):
-        self.code = code
-        self.year = year
-
-    def add_subject(self, name: str):
-        self.subjects.append(Subject(name, lambda: len(self.students)))
-
-    def add_student(self, name: str):
-        self.students.append(Student(name))
-
-    def get_student_average_grade(self, student_index: int):
-        grades_sum = 0
-        for subject in self.subjects:
-            grades_sum += subject.get_students_average_grade(student_index)
-        return grades_sum / len(self.subjects)
-
-    def get_class_average_grade(self):
-        grades_sum = 0
-        for student_index in range(len(self.students)):
-            grades_sum += self.get_student_average_grade(student_index)
-        return grades_sum / len(self.students)
-
-    def get_student_total_attendance(self, student_index: int):
-        total_attendance = 0
-        for subject in self.subjects:
-            total_attendance += subject.get_student_total_attendance(student_index)
-        return total_attendance
-
-    def get_class_total_attendance(self):
-        total_attendance = 0
-        for subject in self.subjects:
-            total_attendance += subject.get_class_total_attendance()
-        return total_attendance
-
-
-class School:
-    classes: List[SchoolClass]
-
-    def __init__(self):
-        self.classes = []
-
-    def check_if_class_with_year_and_code_exists(self, code: str, year: int):
-        found_classes = [c for c in self.classes if c.year == year and c.code == code]
-        if len(found_classes) != 0:
-            return True
-        return False
-
-    def get_school_average_grade(self):
-        grades_sum = 0
-        for school_class in self.classes:
-            grades_sum += school_class.get_class_average_grade()
-        return grades_sum / len(self.classes)
-
-    def get_school_total_attendance(self):
-        total_attendance = 0
-        for school_class in self.classes:
-            total_attendance += school_class.get_class_total_attendance()
-        return total_attendance
-
-    def add_class(self, code: str, year: int):
-        if not self.check_if_class_with_year_and_code_exists(code, year):
-            self.classes.append(SchoolClass(year, code))
-        else:
-            logging.warning("A class with such code and year exists, skipping")
-
-
-# class Lesson:
-#     absent_students: list[int]
-#     student_grades: list[list[int]]
-#
-#     def __init__(self, absent_students: list[int], students_count: int):
-#         self.absent_students = absent_students
-#         self.student_grades = [[] for _ in range(students_count)]
-#
-#     def add_student_grade(self, student_index: int, grade: int):
-#         if len(self.student_grades) > student_index:
-#             self.student_grades[student_index].append(grade)
-#         else:
-#             logging.warning("No such student!")
-
-
-school = {}
+with open("data.json", "r") as file:
+    school = json.load(file)
 
 
 def add_class(code: str, year: int):
@@ -175,33 +50,220 @@ def add_student(class_code: str, name: str):
     school[class_code]["students"].append(name)
 
 
-def add_subject(class_id: int, name: str):
-    if name not in school[class_id]["subjects"]:
-        school[class_id]["subjects"][name] = []
+def add_subject(class_code: str, name: str):
+    if name not in school[class_code]["subjects"]:
+        school[class_code]["subjects"][name] = []
     else:
         raise ValueError("Such index already exists!")
 
 
-def add_lesson(class_id: int, subject_name: str, absent_students: list[int]):
-    school[class_id]["subjects"][subject_name].append({
-        "absent_students": absent_students,
-        "student_grades": [[] for _ in range(len(school[class_id]["students"]))]
+def add_lesson(class_code: str, subject_name: str):
+    school[class_code]["subjects"][subject_name].append({
+        "absent_students": [],
+        "student_grades": [[] for _ in range(len(school[class_code]["students"]))]
     })
 
 
-def add_students_grade(class_id: int, subject_name: str, lesson_id: int, student_index: int, grade: int):
-    school[class_id]["subjects"][subject_name][lesson_id]["student_grades"][student_index].append(grade)
+def add_absent_student_to_a_lesson(class_code: str, subject_name: str, lesson_index: int, absent_student: int):
+    school[class_code]["subjects"][subject_name][lesson_index]['absent_students'].append(absent_student)
 
 
-def get_students_subject_average(subject: list, student_index: int):
-    grades = [grade for lesson in subject for grade in lesson["student_grades"][student_index]]
+def add_students_grade(class_code: str, subject_name: str, lesson_id: int, student_index: int, grade: int):
+    school[class_code]["subjects"][subject_name][lesson_id]["student_grades"][student_index].append(grade)
+
+
+def get_students_subject_average_grade(class_code: str, subject_name: str, student_index: int):
+    grades = [grade for lesson in school[class_code]['subjects'][subject_name]
+              for grade in lesson["student_grades"][student_index]]
     return sum(grades)/len(grades)
 
 
-def get_students_average(class_id: int, student_index: int):
-    grades = [get_students_subject_average(subject, student_index) for subject in school[class_id]["subjects"].values()]
+def get_students_average_grade(class_code: str, student_index: int):
+    grades = [get_students_subject_average_grade(class_code, subject_name, student_index)
+              for subject_name in school[class_code]["subjects"].keys()]
     return sum(grades)/len(grades)
+
+
+def get_students_attendance_per_subject(class_code: str, subject_name: str, student_index: int):
+    attendance = [0 if student_index in lesson["absent_students"] else 1
+                  for lesson in school[class_code]['subjects'][subject_name]]
+    return sum(attendance)/len(attendance)
+
+
+def get_students_total_attendance(class_code: str, student_index: int):
+    attendance = [
+        0 if student_index in lesson["absent_students"] else 1 for subject in school[class_code]["subjects"].values()
+        for lesson in subject
+    ]
+    return sum(attendance)/len(attendance)
+
+
+def get_class_total_attendance(class_code: str):
+    current_attendance = 0
+    total_attendance = 0
+    class_size = len(school[class_code]["students"])
+    for subject in school[class_code]["subjects"]:
+        for lesson in subject:
+            current_attendance += class_size - len(lesson["absent_students"])
+            total_attendance += class_size
+    return current_attendance / total_attendance
+
+
+def get_class_average_grade(class_code: str):
+    grades = [
+        get_students_average_grade(class_code, student_index) for student_index in range(school[class_code]["students"])
+    ]
+    return sum(grades)/len(grades)
+
+
+def get_school_average_grade():
+    grades = [get_class_average_grade(class_code) for class_code in school.keys()]
+    return sum(grades)/len(grades)
+
+
+def print_students_of_a_class(code: str):
+    logging.info("Students: " + str(school[code]['students']))
+
+
+def print_subjects_of_a_class(code: str):
+    logging.info("Subjects: " + str(list(school[code]['subjects'].keys())))
+
+
+def get_school_total_attendance():
+    current_attendance = 0
+    total_attendance = 0
+    for school_class in school.values():
+        class_size = len(school_class["students"])
+        for subject in school_class["subjects"]:
+            for lesson in subject:
+                current_attendance += class_size - len(lesson["absent_students"])
+                total_attendance += class_size
+    return current_attendance / total_attendance
+
+
+def save_to_file():
+    with open("data.json", "w") as file:
+        json.dump(school, file, indent=2)
+
+
+prompts_map = {
+    "1": {
+        "label": "Add a class to the school",
+        "arguments_label": "Type in (with spaces between) class code and class year",
+        "function": add_class
+    },
+    "2": {
+        "label": "List classes",
+        "arguments_label": None,
+        "function": lambda: logging.info(
+            "Classes: " + str([f"code: {code} year: {school_class['year']}" for code, school_class in school.items()])
+        )
+    },
+    "3": {
+        "label": "Add a student to a class",
+        "arguments_label": "Type in (with spaces between) the class code and the name of a person",
+        "function": add_student
+    },
+    "4": {
+        "label": "List students of a class",
+        "arguments_label": "Type in the class code",
+        "function": print_students_of_a_class
+    },
+    "5": {
+        "label": "Add a subject to a class",
+        "arguments_label": "Type in (with spaces between) the class code and the name of a subject",
+        "function": add_subject
+    },
+    "6": {
+        "label": "List subjects from a class",
+        "arguments_label": "Type in the class code",
+        "function": print_subjects_of_a_class
+    },
+    "7": {
+        "label": "Add a lesson to a subject",
+        "arguments_label": "Type in (with spaces between) the class code and the name of a subject",
+        "function": add_lesson
+    },
+    "8": {
+        "label": "Add an absent student to a lesson",
+        "arguments_label": "Type in (with spaces between) the class code, the name of a subject,"
+                           " the lesson id and the absent student index",
+        "function": add_absent_student_to_a_lesson
+    },
+    "9": {
+        "label": "Add a grade to a student",
+        "arguments_label": "Type in (with spaces between) the class code, the name of a subject,"
+                           " the lesson id, the student index and the grade",
+        "function": add_students_grade
+    },
+    "10": {
+        "label": "Get students average grade for a subject",
+        "arguments_label": "Type in (with spaces between) the class code, the name of a subject and the student index",
+        "function": get_students_subject_average_grade
+    },
+    "11": {
+        "label": "Get students average grade",
+        "arguments_label": "Type in (with spaces between) the class code and the student index",
+        "function": get_students_average_grade
+    },
+    "12": {
+        "label": "Get students attendance per subject",
+        "arguments_label": "Type in (with spaces between) the class code, the subject name and the student index",
+        "function": get_students_attendance_per_subject
+    },
+    "13": {
+        "label": "Get students total attendance",
+        "arguments_label": "Type in (with spaces between) the class code and the student index",
+        "function": get_students_total_attendance
+    },
+    "14": {
+        "label": "Get class total attendance",
+        "arguments_label": "Type in the class code",
+        "function": get_class_total_attendance
+    },
+    "15": {
+        "label": "Get class average grade",
+        "arguments_label": "Type in the class code",
+        "function": get_class_average_grade
+    },
+    "16": {
+        "label": "Get school average grade",
+        "arguments_label": None,
+        "function": get_school_average_grade
+    },
+    "17": {
+        "label": "Get school total attendance",
+        "arguments_label": None,
+        "function": get_school_total_attendance
+    },
+    "18": {
+        "label": "Save to file",
+        "arguments_label": None,
+        "function": save_to_file
+    },
+}
 
 
 if __name__ == '__main__':
-    logging.info("I had no time to implement the CLI")
+    while True:
+        logging.info("\n".join([f"{index}. {entry['label']}" for index, entry in prompts_map.items()]))
+        entry1 = input()
+        if entry1 in prompts_map.keys():
+            if prompts_map[entry1]["arguments_label"] is None:
+                prompts_map[entry1]["function"]()
+            else:
+                logging.info(prompts_map[entry1]["arguments_label"])
+                args = []
+                index = 0
+                entry2 = input().split(" ")
+                print(entry2)
+                try:
+                    for argument in inspect.signature(prompts_map[entry1]["function"]).parameters.values():
+                        args.append(argument._annotation(entry2[index]))
+                        index += 1
+                    output = prompts_map[entry1]["function"](*args)
+                    if output is not None:
+                        logging.info(output)
+                except (ValueError, KeyError) as e:
+                    print(e)
+                    logging.warning("An error occured")
